@@ -1,7 +1,7 @@
 // TaskManager.tsx
 import React, { useEffect, useState } from 'react';
-import './app.css'
-import { supabase } from './supabase/supabase-client';
+import './App.css'
+import { supabase } from './supabase/supabase-client.js';
 
 const App: React.FC = () => {
   type task = {
@@ -13,10 +13,42 @@ const App: React.FC = () => {
   };
   const [newTask, setTask]          = useState({ title: "", description: "" });
   const [allTask, setAllTask]       = useState<task[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);;
 
+    // Add item in supabase
+  const handleAddTask = async(e : any) => {
+    e.preventDefault();
+    try {
+      if(selectedId){
+        const {error} = await supabase.from("taskCollection").update({
+          title: newTask.title,
+          description: newTask.description
+        }).eq("id", selectedId);
+
+        if(error){
+          console.log('error found while updating task :>> ', error);
+        }else {
+          alert("Updating successful");
+        }
+
+      }else {
+        await supabase.from("taskCollection").insert(newTask).single();
+        alert("Data added successfully");
+        setTask({
+          title: "",
+          description: ""
+        })
+
+      }
+
+    } catch (error) {
+    };
+      alert("Error occurred!");
+    }
+  
+  // fetch data from supabase
   useEffect(() => {
     let isMounted = true;
-
     const fetch_data = async() => {
       const {error, data} = await supabase
         .from("taskCollection")
@@ -37,20 +69,25 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleAddTask = async(e : any) => {
-    e.preventDefault();
-    try {
-      await supabase.from("taskCollection").insert(newTask).single();
-      alert("Data added successfully");
-      setTask({
-        title: "",
-        description: ""
-      })
+  // delete item from database
+  const handleDeleteTask = async(id: string) => {
+    const {error} = await supabase.from("taskCollection").delete().eq("id", id);
 
-    } catch (error) {
-      alert("Error occurred!");
+    if(error){
+      console.log('error  :>> ', error.message );
+    }else {
+      alert("Task deleted successfully");
     }
-  };
+  }
+
+  // populate input fields with existing data to update it
+  const handlePopulateInputFields = (task: task) => {
+      setTask({title: task.title, description: task.description});
+      setSelectedId(task.id);
+  }; 
+
+
+  
 
   return (
     <div className="container">
@@ -88,10 +125,10 @@ const App: React.FC = () => {
             <p className="task-description">{task?.description}</p>
           </div>
           <div className="task-actions">
-            <button className="edit-button">
+            <button onClick={()=>handlePopulateInputFields(task)} className="edit-button">
               Edit
             </button>
-            <button className="delete-button">
+            <button onClick={()=>handleDeleteTask(task.id)} className="delete-button">
               Delete
             </button>
           </div>
