@@ -1,16 +1,10 @@
 // TaskManager.tsx
 import React, { useEffect, useState } from 'react';
 import './App.css'
-import { supabase } from './supabase/supabase-client.js';
+import { manage_addNewTask, manage_deleteTask, manage_fetch_data, manage_updateTask, type task } from './api/taskApi.js';
 
 const App: React.FC = () => {
-  type task = {
-    id: string;
-    title: string;
-    description: string;
-    created_at: string
 
-  };
   const [newTask, setTask]          = useState({ title: "", description: "" });
   const [allTask, setAllTask]       = useState<task[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);;
@@ -18,65 +12,51 @@ const App: React.FC = () => {
     // Add item in supabase
   const handleAddTask = async(e : any) => {
     e.preventDefault();
+
     try {
       if(selectedId){
-        const {error} = await supabase.from("taskCollection").update({
-          title: newTask.title,
-          description: newTask.description
-        }).eq("id", selectedId);
-
-        if(error){
-          console.log('error found while updating task :>> ', error);
-        }else {
-          alert("Updating successful");
-        }
+        await manage_updateTask(selectedId, newTask);
+        alert("Update Successful");
 
       }else {
-        await supabase.from("taskCollection").insert(newTask).single();
-        alert("Data added successfully");
-        setTask({
-          title: "",
-          description: ""
-        })
+        await manage_addNewTask(newTask);
+        alert("New Task added");
 
       }
+       setTask({ title: "", description: "" });
+        setSelectedId(null);
+        loadTasks();
 
     } catch (error) {
     };
       alert("Error occurred!");
-    }
+  }
   
   // fetch data from supabase
+  const loadTasks = async() => {
+    try {
+      const tasks = await manage_fetch_data();
+      setAllTask(tasks);
+
+    } catch (error:any) {
+      console.log('error.message :>> ', error.message);
+    }
+  }
+
   useEffect(() => {
-    let isMounted = true;
-    const fetch_data = async() => {
-      const {error, data} = await supabase
-        .from("taskCollection")
-        .select("*")
-        .order("created_at", {ascending: true});
-      if(error){
-        console.log('error :>> ', error);
+    loadTasks();
 
-      }else if(isMounted){
-        setAllTask(data)
-      }
-    }
-
-    fetch_data();
-    
-    return () => {
-      isMounted = false;
-    }
   }, []);
 
   // delete item from database
   const handleDeleteTask = async(id: string) => {
-    const {error} = await supabase.from("taskCollection").delete().eq("id", id);
-
-    if(error){
-      console.log('error  :>> ', error.message );
-    }else {
+    try {
+      await manage_deleteTask(id);
       alert("Task deleted successfully");
+      loadTasks();
+
+    } catch (error:any) {
+      console.log(error.message);
     }
   }
 
@@ -85,9 +65,6 @@ const App: React.FC = () => {
       setTask({title: task.title, description: task.description});
       setSelectedId(task.id);
   }; 
-
-
-  
 
   return (
     <div className="container">
