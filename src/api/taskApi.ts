@@ -5,7 +5,7 @@ export  type task = {
     title: string;
     description: string;
     created_at: string
-
+    email: string
   };
 
 export const manage_fetch_data = async():Promise<task[]> => {
